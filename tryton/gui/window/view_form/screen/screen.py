@@ -464,7 +464,7 @@ class Screen(SignalEvent):
                 pos = self.group.index(record) + self.offset + 1
             except ValueError:
                 # XXX offset?
-                pos = record.get_index_path()
+                pos = -1
         else:
             pos = 0
         self.signal('record-message', (pos, len(self.group) + self.offset,
@@ -606,7 +606,8 @@ class Screen(SignalEvent):
         for field in fields:
             self.group.fields[field].views.add(view_id)
         view = View.parse(
-            self, view_id, view['type'], xml_dom, view.get('field_childs'))
+            self, view_id, view['type'], xml_dom, view.get('field_childs'),
+            view.get('children_definitions'))
         self.views.append(view)
 
         return view
@@ -973,7 +974,8 @@ class Screen(SignalEvent):
             group = self.current_record.group
             record = self.current_record
             while group:
-                children = record.children_group(view.children_field)
+                children = record.children_group(view.children_field,
+                    view.children_definitions)
                 if children:
                     record = children[0]
                     break
@@ -1055,7 +1057,8 @@ class Screen(SignalEvent):
                 record = group[idx]
                 children = True
                 while children:
-                    children = record.children_group(view.children_field)
+                    children = record.children_group(view.children_field,
+                        view.children_definitions)
                     if children:
                         record = children[-1]
             else:
