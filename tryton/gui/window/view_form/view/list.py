@@ -452,7 +452,9 @@ class ViewTree(View):
         self.treeview = None
         self._editable = bool(int(xml.getAttribute('editable') or 0))
         if self._editable:
-            self.treeview = EditableTreeView(self)
+            # ABD: Pass self.attributes.get('editable_open') to constructor
+            self.treeview = EditableTreeView(
+                self, xml.getAttribute('editable_open'))
             grid_lines = Gtk.TreeViewGridLines.BOTH
         else:
             self.treeview = TreeView(self)
