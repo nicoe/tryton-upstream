@@ -71,6 +71,7 @@ class Screen(SignalEvent):
         self.__group = None
         self.new_group(context or {})
         self.__current_record = None
+        self.new_group()
         self.current_record = None
         self.screen_container = ScreenContainer(attributes.get('tab_domain'))
         self.screen_container.alternate_view = attributes.get(
@@ -425,6 +426,10 @@ class Screen(SignalEvent):
         for name, views in fields_views.items():
             self.__group.fields[name].views.update(views)
         self.__group.exclude_field = self.exclude_field
+        if len(group):
+            self.current_record = group[0]
+        else:
+            self.current_record = None
 
     group = property(__get_group, __set_group)
 
@@ -458,6 +463,7 @@ class Screen(SignalEvent):
         return self.__current_record
 
     def __set_current_record(self, record):
+        changed = self.__current_record != record
         self.__current_record = record
         if record:
             try:
@@ -469,6 +475,9 @@ class Screen(SignalEvent):
             pos = 0
         self.signal('record-message', (pos, len(self.group) + self.offset,
             self.search_count, record and record.id))
+        # Coog Specific for multimixed view
+        if changed:
+            self.signal('current-record-changed')
         self.signal('resources', record.resources if record else None)
         # update resources after 1 second
         GLib.timeout_add(1000, self._update_resources, record)

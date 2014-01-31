@@ -3,7 +3,7 @@
 import gettext
 import itertools
 
-from gi.repository import Gdk, Gtk
+from gi.repository import Gdk, Gtk, GLib
 
 from .widget import Widget
 from tryton.gui.window.view_form.screen import Screen
@@ -171,6 +171,9 @@ class One2Many(Widget):
             breadcrumb=breadcrumb)
         self.screen.pre_validate = bool(int(attrs.get('pre_validate', 0)))
         self.screen.signal_connect(self, 'record-message', self._sig_label)
+        if self.attrs.get('group'):
+            self.screen.signal_connect(self, 'current-record-changed',
+                lambda screen, _: GLib.idle_add(self.group_sync, screen))
 
         vbox.pack_start(self.screen.widget, expand=True, fill=True, padding=0)
 
@@ -356,10 +359,17 @@ class One2Many(Widget):
                 self.screen.group.set_sequence(
                     field=sequence, position=self.screen.new_position)
 
-        if self.screen.current_view.editable:
-            self.screen.new()
-            self.screen.current_view.widget.set_sensitive(True)
-            update_sequence()
+        for widget in [self] + self.view.widgets[self.field_name]:
+            if ((self.attrs.get('group')
+                        and widget.attrs.get('group') != self.attrs['group'])
+                    or not hasattr(widget, 'screen')):
+                continue
+            if (widget.screen.current_view.view_type == 'form'
+                    or widget.screen.editable_get()):
+                record = widget.screen.new()
+                widget.screen.current_view.widget.set_sensitive(True)
+                update_sequence()
+                break
         else:
             field_size = self.record.expr_eval(self.attrs.get('size')) or -1
             field_size -= len(self.field.get_eval(self.record)) + 1
@@ -504,6 +514,28 @@ class One2Many(Widget):
         line = '(%s/%s)' % (name, self._length)
         self.label.set_text(line)
         self._set_button_sensitive()
+
+    def group_sync(self, screen, current_record):
+        if not self.view or not self.view.widgets:
+            return
+        if screen.current_record != current_record:
+            return
+        current_record = self.screen.current_record
+        for widget in self.view.widgets[self.field_name]:
+            if (widget == self
+                    or widget.attrs.get('group') != self.attrs['group']
+                    or not hasattr(widget, 'screen')):
+                continue
+            if widget.screen.current_record == current_record:
+                continue
+            if not widget._validate():
+                def go_previous():
+                    screen.current_record = widget.screen.current_record
+                    screen.display()
+                GLib.idle_add(go_previous)
+                break
+            widget.screen.current_record = current_record
+            widget.screen.display()
 
     def display(self):
         super(One2Many, self).display()
