@@ -36,6 +36,7 @@ from .form_gtk.multiselection import MultiSelection
 from .form_gtk.pyson import PYSON
 from .form_gtk.state_widget import (Label, VBox, Image, Frame, ScrolledWindow,
     Notebook, Expander, Link)
+from .form_gtk.sourceeditor import SourceView
 
 _ = gettext.gettext
 
