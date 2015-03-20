@@ -12,7 +12,7 @@ from gi.repository import GLib, GObject, Gtk
 
 from tryton import __version__
 import tryton.common as common
-from tryton.common.date_widget import Date
+from tryton.common.datetime_ import Date
 from tryton.config import CONFIG, TRYTON_ICON, PIXMAPS_DIR, get_config_dir
 import tryton.rpc as rpc
 from tryton.common.underline import set_underline
