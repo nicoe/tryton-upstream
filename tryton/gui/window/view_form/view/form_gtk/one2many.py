@@ -195,6 +195,11 @@ class One2Many(Widget):
 
         but_switch.props.sensitive = self.screen.number_of_views > 1
 
+    def _color_widget(self):
+        if hasattr(self.screen.current_view, 'treeview'):
+            return self.screen.current_view.treeview
+        return super(One2Many, self)._color_widget()
+
     def on_keypress(self, widget, event):
         if ((event.keyval == Gdk.KEY_F3)
                 and self.but_new.get_property('sensitive')):
@@ -246,6 +251,7 @@ class One2Many(Widget):
 
     def switch_view(self, widget):
         self.screen.switch_view()
+
         mnemonic_widget = self.screen.current_view.mnemonic_widget
         string = self.attrs.get('string', '')
         if mnemonic_widget:
@@ -258,6 +264,15 @@ class One2Many(Widget):
         # JCA : Check current_view is not None
         return (self.screen.current_view.modified if self.screen.current_view
             else False)
+
+    def color_set(self, name):
+        super(One2Many, self).color_set(name)
+        widget = self._color_widget()
+        # if the style to apply is different from readonly then insensitive
+        # cellrenderers should use the default insensitive color
+        if name != 'readonly':
+            widget.modify_text(gtk.STATE_INSENSITIVE,
+                    self.colors['text_color_insensitive'])
 
     def _readonly_set(self, value):
         self._readonly = value
