@@ -4,9 +4,11 @@ import sys
 import json
 import locale
 import gettext
+import ast
+import logging
 from functools import wraps
 
-from gi.repository import Gdk, GLib, GObject, Gtk
+from gi.repository import Gdk, GLib, GObject, Gtk, Pango
 from pygtkcompat.generictreemodel import GenericTreeModel
 
 from tryton.config import CONFIG
@@ -16,6 +18,7 @@ from tryton.common.popup_menu import populate
 from tryton.common import RPCExecute, RPCException, node_attributes, Tooltips
 from tryton.common import domain_inversion, simplify, unique_value
 from tryton.pyson import PYSONDecoder
+from tryton.common import COLOR_RGB, FORMAT_ERROR
 import tryton.common as common
 from . import View, XMLViewParser
 from .list_gtk.editabletree import EditableTreeView, TreeView
@@ -24,6 +27,7 @@ from .list_gtk.widget import (Affix, Char, Text, Int, Boolean, URL, Date,
     MultiSelection, Reference, Dict, ProgressBar, Button, Image)
 
 _ = gettext.gettext
+logger = logging.getLogger(__name__)
 
 
 def delay(func):
@@ -378,6 +382,52 @@ class TreeXMLViewParser(XMLViewParser):
 
         self.view.treeview.append_column(column)
 
+    # ABD: See #3428
+    def _set_background(self, value, attrlist):
+        if value not in COLOR_RGB:
+            logger.info('This color is not supported => %s' % value)
+        color = COLOR_RGB.get(value, COLOR_RGB['black'])
+        if hasattr(Pango, 'AttrBackground'):
+            attrlist.change(Pango.AttrBackground(
+                    color[0], color[1], color[2], 0, -1))
+
+    def _set_foreground(self, value, attrlist):
+        if value not in COLOR_RGB:
+            logger.info('This color is not supported => %s' % value)
+        color = COLOR_RGB.get(value, COLOR_RGB['black'])
+        if hasattr(Pango, 'AttrForeground'):
+            attrlist.change(Pango.AttrForeground(
+                    color[0], color[1], color[2], 0, -1))
+
+    def _set_font(self, value, attrlist):
+        attrlist.change(Pango.AttrFontDesc(
+                Pango.FontDescription(value), 0, -1))
+
+    def _format_set(self, attrs, attrlist):
+        functions = {
+            'color': self._set_foreground,
+            'fg': self._set_foreground,
+            'bg': self._set_background,
+            'font': self._set_font
+            }
+        if not getattr(attrs, 'states', None):
+            return
+        states = ast.literal_eval(attrs['states'])
+        for attr in list(states.keys()):
+            if not states[attr]:
+                continue
+            key = attr.split('_')
+            if key[0] == 'field':
+                continue
+            if key[0] == 'label':
+                key = key[1:]
+            if isinstance(states[attr], str):
+                key.append(states[attr])
+            if key[0] in functions:
+                if len(key) != 2:
+                    raise ValueError(FORMAT_ERROR + attr)
+                functions[key[0]](key[1], attrlist)
+
     def _set_column_widget(self, column, attributes, arrow=True, align=0.5):
         hbox = Gtk.HBox(homogeneous=False, spacing=2)
         label = Gtk.Label(label=attributes['string'])
@@ -386,6 +436,9 @@ class TreeXMLViewParser(XMLViewParser):
             required = field.get('required')
             readonly = field.get('readonly')
             common.apply_label_attributes(label, readonly, required)
+        attrlist = Pango.AttrList()
+        self._format_set(attributes, attrlist)
+        label.set_attributes(attrlist)
         label.show()
         help = attributes.get('help')
         if help:
