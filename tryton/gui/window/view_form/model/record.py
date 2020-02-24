@@ -1,5 +1,7 @@
 # This file is part of Tryton.  The COPYRIGHT file at the top level of
 # this repository contains the full copyright notices and license terms.
+import logging
+
 from tryton.signal_event import SignalEvent
 import tryton.common as common
 from tryton.pyson import PYSONDecoder
@@ -146,7 +148,23 @@ class Record(SignalEvent):
 
     @property
     def modified(self):
-        return bool(self.modified_fields)
+        result = bool(self.modified_fields)
+        if not result:
+            return result
+        # JCA #15014 Add a way to make sure some fields are always ignored when
+        # detecting whether the record needs saving
+        for field in self.modified_fields:
+            if field not in self.group.fields:
+                break
+            if not self.group.fields[field].attrs.get(
+                    'never_modified', False):
+                break
+        else:
+            return False
+        logging.getLogger('root').critical(
+            '%s : modified fields : %s' % (
+                self, list(self.modified_fields.keys())))
+        return result
 
     @property
     def parent(self):
