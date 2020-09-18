@@ -68,15 +68,15 @@ class Screen(SignalEvent):
         self.tree_states = collections.defaultdict(
             lambda: collections.defaultdict(lambda: None))
         self.tree_states_done = set()
+        self.__current_record = None
         self.__group = None
         self.new_group(context or {})
-        self.__current_record = None
-        self.new_group()
         self.current_record = None
         self.screen_container = ScreenContainer(attributes.get('tab_domain'))
         self.screen_container.alternate_view = attributes.get(
             'alternate_view', False)
         self.widget = self.screen_container.widget_get()
+        self._multiview_form = None
         self.breadcrumb = attributes.get('breadcrumb') or []
 
         self.context_screen = None
@@ -766,6 +766,8 @@ class Screen(SignalEvent):
         if self.parent:
             self.parent.root_parent.reload()
         self.display()
+        if self._multiview_form:
+            self._multiview_form.screen.reload([self.parent.root_parent.id])
 
     def unremove(self):
         records = self.selected_records
@@ -945,7 +947,7 @@ class Screen(SignalEvent):
         if set_cursor:
             self.set_cursor()
 
-    def display(self, res_id=None, set_cursor=False):
+    def display(self, res_id=None, set_cursor=False, force=False):
         if res_id:
             self.current_record = self.group.get(res_id)
         else:
@@ -966,7 +968,7 @@ class Screen(SignalEvent):
                 if (view == self.current_view
                         or view.view_type == 'tree'
                         or view.widget.get_parent()):
-                    view.display()
+                    view.display(force=force)
 
             self.current_view.widget.set_sensitive(
                 bool(self.group
