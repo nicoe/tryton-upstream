@@ -993,7 +993,7 @@ msgstr "Impossible de supprimer l'assistant %s"
 msgid "ID"
 msgstr "ID"
 
-msgid "Create by"
+msgid "Created by"
 msgstr "Crée par"
 
 msgid "Created at"
