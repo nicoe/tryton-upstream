@@ -639,11 +639,9 @@ class Form(SignalEvent, TabContent):
         menu_save = self.menu_buttons['save']
         menu_save.props.sensitive = not self.screen.readonly
 
-        msg = name + ' / ' + str(signal_data[1])
-        if (signal_data[1] < signal_data[2]
-                and self.screen.limit is not None
-                and signal_data[2] > self.screen.limit):
-            msg += _(' of ') + str(signal_data[2])
+        msg = name + ' / ' + common.humanize(signal_data[1])
+        if signal_data[1] < signal_data[2]:
+            msg += _(' of ') + common.humanize(signal_data[2])
         self.status_label.set_text(msg)
         self.message_info()
         self.activate_save()
