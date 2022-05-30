@@ -18,11 +18,6 @@ from contextlib import contextmanager
 from functools import reduce
 from urllib.parse import urljoin, quote
 
-try:
-    from http import HTTPStatus
-except ImportError:
-    from http import client as HTTPStatus
-
 __all__ = ["ResponseError", "Fault", "ProtocolError", "Transport",
     "ServerProxy", "ServerPool"]
 CONNECT_TIMEOUT = 5
@@ -299,8 +294,6 @@ class ServerProxy(xmlrpc.client.ServerProxy):
                     verbose=self.__verbose
                     )
         except xmlrpc.client.ProtocolError as e:
-            if e.errcode == HTTPStatus.UNAUTHORIZED:
-                raise ProtocolError(self.__host, e.errcode, e.errmsg, {})
             raise Fault(str(e.errcode), e.errmsg)
         except Exception:
             self.__transport.close()
